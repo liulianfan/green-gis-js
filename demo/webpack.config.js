@@ -1,6 +1,6 @@
 module.exports = {
     mode: "development",
-    entry: "./tooltip.js",
+    entry: "./noop-proj.js",
     output: {
         filename: "bundle.js"
     },

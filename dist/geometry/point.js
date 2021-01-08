@@ -11,32 +11,58 @@ import { CoordinateType, Geometry } from "./geometry";
 import { Bound } from "../util/bound";
 import { SimplePointSymbol } from "../symbol/symbol";
 import { WebMercator } from "../projection/web-mercator";
-//点
+/**
+ * 点
+ */
 export class Point extends Geometry {
+    /**
+     * 创建点
+     * @param {number} lng - 经度
+     * @param {number} lat - 纬度
+     */
     constructor(lng, lat) {
         super();
         this._lng = lng;
         this._lat = lat;
     }
+    /**
+     * 经纬度-经度
+     */
     get lng() {
         return this._lng;
     }
+    /**
+     * 经纬度-纬度
+     */
     get lat() {
         return this._lat;
     }
+    /**
+     * 平面坐标-X
+     */
     get x() {
         return this._x;
     }
+    /**
+     * 平面坐标-Y
+     */
     get y() {
         return this._y;
     }
     ;
+    /**
+     * 输出GeoJSON格式字符串
+     */
     toGeoJSON() {
         return {
             "type": "Point",
             "coordinates": [this._lng, this._lat]
         };
     }
+    /**
+     * 投影变换
+     * @param {Projection} projection - 坐标投影转换
+     */
     project(projection) {
         this._projection = projection;
         [this._x, this._y] = this._projection.project([this._lng, this._lat]);
@@ -44,6 +70,13 @@ export class Point extends Geometry {
         this._bound = new Bound(this._x, this._y, this._x, this._y);
         this._projected = true;
     }
+    /**
+     * 移动点（用于编辑）
+     * @param {CanvasRenderingContext2D} ctx - 绘图上下文
+     * @param {Projection} projection - 坐标投影转换
+     * @param {number} screenX - 屏幕坐标X
+     * @param {number} screenY - 屏幕坐标Y
+     */
     move(ctx, projection, screenX, screenY) {
         const matrix = ctx.getTransform();
         this._screenX = screenX;
@@ -55,6 +88,13 @@ export class Point extends Geometry {
         [this._lng, this._lat] = this._projection.unproject([this._x, this._y]);
         this._projected = true;
     }
+    /**
+     * 绘制点
+     * @param {CanvasRenderingContext2D} ctx - 绘图上下文
+     * @param {Projection} projection - 坐标投影转换
+     * @param {Bound} extent - 当前可视范围
+     * @param {Symbol} symbol - 渲染符号
+     */
     draw(ctx, projection = new WebMercator(), extent = projection.bound, symbol = new SimplePointSymbol()) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this._projected)
@@ -65,102 +105,35 @@ export class Point extends Geometry {
             this._screenX = (matrix.a * this._x + matrix.e);
             this._screenY = (matrix.d * this._y + matrix.f);
             this._symbol = symbol;
-            this._symbol.draw(ctx, this._screenX, this._screenY);
-            /*if (symbol instanceof SimplePointSymbol) {
-                ctx.save();
-                ctx.strokeStyle = (symbol as SimplePointSymbol).strokeStyle;
-                ctx.fillStyle = (symbol as SimplePointSymbol).fillStyle;
-                ctx.lineWidth = (symbol as SimplePointSymbol).lineWidth;
-                ctx.beginPath(); //Start path
-                //keep size
-                //地理坐标 转回 屏幕坐标
-                ctx.setTransform(1,0,0,1,0,0);
-                ctx.arc(this._screenX, this._screenY, (symbol as SimplePointSymbol).radius, 0, Math.PI * 2, true);
-                ctx.fill();
-                ctx.stroke();
-                ctx.restore();
-            } else if (symbol instanceof SimpleMarkerSymbol) {
-                const marker: SimpleMarkerSymbol = symbol;
-                if (!marker.loaded) await marker.load();
-                if (marker.icon) {
-                    ctx.save();
-                    const matrix = (ctx as any).getTransform();
-                    //keep size
-                    ctx.setTransform(1,0,0,1,0,0);
-                    ctx.drawImage(marker.icon, this._screenX + marker.offsetX, this._screenY + marker.offsetY, marker.width, marker.height);
-                    ctx.restore();
-                }
-            } else if (symbol instanceof LetterSymbol) {
-                const letter: LetterSymbol = symbol;
-                ctx.save();
-                ctx.strokeStyle = letter.strokeStyle;
-                ctx.fillStyle = letter.fillStyle;
-                ctx.lineWidth = letter.lineWidth;
-                ctx.beginPath(); //Start path
-                //keep size
-                ctx.setTransform(1,0,0,1,0,0);
-                ctx.arc(this._screenX, this._screenY, letter.radius, 0, Math.PI * 2, true);
-                ctx.fill();
-                ctx.stroke();
-                ctx.textBaseline = "middle";
-                ctx.textAlign = "center";
-                ctx.fillStyle = letter.fontColor;
-                ctx.font =  letter.fontSize + "px/1 " + letter.fontFamily +  " " + letter.fontWeight;
-                ctx.fillText(letter.letter, this._screenX, this._screenY);
-                ctx.restore();
-            } else if (symbol instanceof VertexSymbol) {
-                ctx.save();
-                ctx.strokeStyle = (symbol as VertexSymbol).strokeStyle;
-                ctx.fillStyle = (symbol as VertexSymbol).fillStyle;
-                ctx.lineWidth = (symbol as VertexSymbol).lineWidth;
-                ctx.beginPath(); //Start path
-                //keep size
-                ctx.setTransform(1,0,0,1,0,0);
-                const size = (symbol as VertexSymbol).size;
-                ctx.rect(this._screenX - size/2, this._screenY - size/2, size, size);
-                ctx.fill();
-                ctx.stroke();
-                ctx.restore();
-            } else if (symbol instanceof ClusterSymbol) {
-                const cluster: ClusterSymbol = symbol;
-                ctx.save();
-                ctx.setTransform(1,0,0,1,0,0);
-                ctx.strokeStyle = cluster.strokeStyle;
-                ctx.fillStyle = cluster.outerFillStyle;
-                ctx.lineWidth = cluster.lineWidth;
-                ctx.beginPath(); //Start path
-                //keep size
-                ctx.arc(this._screenX, this._screenY, cluster.outer, 0, Math.PI * 2, true);
-                ctx.fill();
-                ctx.stroke();
-                ctx.fillStyle = cluster.innerFillStyle;
-                ctx.beginPath(); //Start path
-                //keep size
-                ctx.arc(this._screenX, this._screenY, cluster.inner, 0, Math.PI * 2, true);
-                ctx.fill();
-                ctx.stroke();
-                ctx.textBaseline = "middle";
-                ctx.textAlign = "center";
-                ctx.fillStyle = cluster.fontColor;
-                ctx.font =  cluster.fontSize + "px/1 " + cluster.fontFamily +  " " + cluster.fontWeight;
-                ctx.fillText(cluster.text, this._screenX, this._screenY);
-                ctx.restore();
-            }*/
+            yield this._symbol.draw(ctx, this._screenX, this._screenY);
         });
     }
     ;
+    /*animate(elapsed, ctx: CanvasRenderingContext2D, projection: Projection = new WebMercator(), extent: Bound = projection.bound, animation: Animation) {
+        if (!this._projected) this.project(projection);
+        if (!extent.intersect(this._bound)) return;
+        const matrix = (ctx as any).getTransform();
+        this._screenX = (matrix.a * this._x + matrix.e);
+        this._screenY = (matrix.d * this._y + matrix.f);
+        animation.animate(elapsed, ctx, this._screenX, this._screenY);
+    };*/
+    /**
+     * 是否包含传入坐标
+     * @remarks
+     * 由于点是0维，主要根据渲染的符号大小来判断传入坐标是否落到点内
+     * @param {number} screenX - 鼠标屏幕坐标X
+     * @param {number} screenX - 鼠标屏幕坐标Y
+     * @return {boolean} 是否落入
+     */
     contain(screenX, screenY) {
-        /*if (this._symbol instanceof SimplePointSymbol) {
-            return Math.sqrt((this._screenX - screenX) *  (this._screenX - screenX) +  (this._screenY - screenY) *  (this._screenY - screenY)) <= (this._symbol as SimplePointSymbol).radius;
-        } else if (this._symbol instanceof SimpleMarkerSymbol) {
-            return screenX >= (this._screenX + this._symbol.offsetX) &&  screenX <= (this._screenX + this._symbol.offsetX + this._symbol.width) && screenY >= (this._screenY + this._symbol.offsetY) &&  screenY <= (this._screenY + this._symbol.offsetY + this._symbol.height);
-        } else if (this._symbol instanceof LetterSymbol) {
-            return Math.sqrt((this._screenX - screenX) *  (this._screenX - screenX) +  (this._screenY - screenY) *  (this._screenY - screenY)) <= (this._symbol as LetterSymbol).radius;
-        } else if (this._symbol instanceof VertexSymbol) {
-            return screenX >= (this._screenX - this._symbol.size / 2) &&  screenX <= (this._screenX + this._symbol.size / 2) && screenY >= (this._screenY - this._symbol.size / 2) &&  screenY <= (this._screenY + this._symbol.size / 2);
-        }*/
         return this._symbol ? this._symbol.contain(this._screenX, this._screenY, screenX, screenY) : false;
     }
+    /**
+     * 获取中心点
+     * @param {CoordinateType} type - 坐标类型
+     * @param {Projection} projection - 坐标投影转换
+     * @return {number[]} 中心点坐标
+     */
     getCenter(type = CoordinateType.Latlng, projection = new WebMercator()) {
         if (!this._projected)
             this.project(projection);
@@ -172,7 +145,3 @@ export class Point extends Geometry {
         }
     }
 }
-//bound
-Point.BOUND_TOLERANCE = 10; //meter
-//interaction: hover && identify
-Point.INTERACTION_TOLERANCE = 0; //screen pixel
